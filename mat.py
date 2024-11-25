@@ -1,6 +1,38 @@
 import numpy as np
 
-#
+def product_matrix( A , B ):
+    """
+    Calculate the product row by column between two matrix
+
+    Parameters
+    ----------
+    A: 2D array like
+        first matrix
+    B: 2D array like
+        second matrix
+    
+    Raises
+    ------
+    1: len(A[0]) != len(B)
+            First matrix has to have the same row lenght as the second matrix's column lenght
+
+    Returns
+    -------
+    np.array
+        the resulting matrix
+    """
+    if len(A[0]) != len(B):
+        raise ValueError("First matrix has to have the same row lenght as the second matrix's column lenght")
+    
+    prod_mat = np.zeros( (len(A) , len(B[0])))
+    
+    for new_mat_col in range(len(A)):
+        for new_mat_row in range(len(B[0])):
+            for j in range(len(B)):
+                prod_mat[new_mat_row , new_mat_col] += A[j,new_mat_col] * B[new_mat_row,j]
+    return prod_mat
+
+
 def det(matrix):
     """
     Calculate the determinant of a square matrix.
@@ -104,16 +136,18 @@ def down_back_solution( matrix, coefficents ):
         x.append( (coefficents[index_x]-sum)/matrix[index_x,index_x])
     return np.array(x)
 
-def gauss( matrix , b , partial_pivoting:bool = True):
+def gauss( matrix , b = 0, partial_pivoting:bool = True):
     """
-    Perform Gaussian elimination on the matrix. Modify the variable globally
+    Perform Gaussian elimination on the matrix till it gets an upper triangular matrix.
+    Modify the variable globally
 
     Parameters
     ----------
-    mat : 2D array-like
+    matrix : 2D array-like
         The input matrix.
-    b : 1D array-like
-        The known value array.
+    b : 1D array-like 
+        The known value array.  
+        (Optional) Default: zero filled array of the size of mat
     partial_pivoting: bool
         if you want partial pivoting or not.    
         Default: True
@@ -126,16 +160,21 @@ def gauss( matrix , b , partial_pivoting:bool = True):
             Matrix has to be square
 
     """
+    if (type(b) is int) and (b == 0): b = np.zeros(len(matrix))
+
     if len(matrix) != len(b): raise TypeError("the 2 argument has to be the same lenght")
     if len(matrix) != len(matrix[0]): raise TypeError("the matrix has to be square")
+    
 
     if(partial_pivoting):part_pivot( matrix , b )
 
     for i in range( len(matrix)-1):
         for j in range( i+1 , len(matrix)):
-            k = matrix[i,i] / matrix[j,i]
-            matrix[j] = k * matrix[j] - matrix[i]
-            b[j] = k * b[j] - b[i]
+            
+            if(matrix[j,i] != 0):
+                k = matrix[i,i] / matrix[j,i]
+                matrix[j] = k * matrix[j] - matrix[i]
+                b[j] = k * b[j] - b[i]
 
 def part_pivot(matrix , b):
     """
@@ -158,11 +197,11 @@ def part_pivot(matrix , b):
     if len(matrix) != len(b): raise TypeError("the 2 argument has to be the same lenght")
     if len(matrix) != len(matrix[0]): raise TypeError("the matrix has to be square")
 
-    for i in range( len(matrix)-1):
-        for j in range( i+1 , len(matrix)-1):
+    for i in range( len(matrix)):
+        for j in range( i+1 , len(matrix)):
             if matrix[j,i] > matrix[i,i]:
-                matrix[i],matrix[j] = matrix[j],matrix[i]
-                b[i],b[j] = b[j],b[i]
+                matrix[[i,j]] = matrix[[j,i]]
+                b[[i,j]] = b[[j,i]]
 
 def inverse_mat( matrix:np.array) -> np.array:
     """
@@ -247,16 +286,34 @@ def solve_mat( matrix:np.array , coefficents:np.array , change_mat:bool = False 
     return up_back_solution( mat1 , b)
 
 
+def LU_substitution( mat:np.array) -> list:
+    if len(mat) != len(mat[0]) : raise TypeError("matrix has to be square")
+    
+    L = np.identity(len(mat))
+    U = np.copy(mat)
+
+    gauss( U , partial_pivoting= True)
+
+    L[1,0] = mat[1,0]/U[0,0]
+    L[2,0] = mat[2,0]/U[0,0]
+    L[2,1] = (mat[2,1] - U[0,1]*L[2,0])/U[1,1]
+    return [L,U]
+
+
+
+
 if __name__ == '__main__':
-    mat = np.array([[2,1,5],[1,8,-2],[1,2,1]] , dtype=np.float32)
-    b = np.array( [1,-2,2] , dtype = np.float32)
+    mat = np.array([[2,1,1],[2,1,-4],[1,2,1]] , dtype=np.float32)
+    b = np.array( [8,-2,2] , dtype = np.float32)
 
     mat.dtype = np.float32
     #rnd_mat = 5*np.random.rand( 3,3)-2.5
     #rnd_b = 10*np.random.rand(3) - 5
     
-    print(solve_mat(mat,b))
-    print(inverse_mat(mat))
-    print(mat)
 
-    print( np.matmul(inverse_mat(mat) , mat))
+    L,U = LU_substitution(mat)
+    print(solve_mat(mat,b))
+
+    print( L , '\n\n' , U)
+    matrix = product_matrix(L,U)
+    print(solve_mat(matrix,b))
