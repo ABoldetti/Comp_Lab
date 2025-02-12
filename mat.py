@@ -1,5 +1,6 @@
 import numpy as np
-import scipy as sp
+import matplotlib.pyplot as plt
+import scipy.linalg as la
 
 def product_matrix( A , B ):
     """
@@ -101,7 +102,6 @@ def up_back_solution( matrix:np.array , coefficents:np.array ) -> np.array:
     for index_x in range(len(matrix)):
         sum = 0
         for index_sum in range(index_x):
-            a = 0
             sum+= matrix[len(matrix) - 1 - index_x , len(matrix) - 1 -index_sum]*x[index_sum]
         x.append( (coefficents[len(matrix) - 1 - index_x]-sum)/matrix[len(matrix) - 1 - index_x , len(matrix) - 1 - index_x])
     return np.flip(x)
@@ -137,11 +137,12 @@ def down_back_solution( matrix, coefficents ):
     for index_x in range(len(matrix)):
         sum = 0
         for index_sum in range(index_x):
+            print(index_x , index_sum)
             sum+= matrix[index_x , index_sum]*x[index_sum]
         x.append( (coefficents[index_x]-sum)/matrix[index_x,index_x])
     return np.array(x)
 
-def gauss( matrix , b = 0, partial_pivoting:bool = True , permutation:bool = False):
+def gauss( mat , coeff = 0, partial_pivoting:bool = True , permutation:bool = False):
     """
     Perform Gaussian elimination on the matrix till it gets an upper triangular matrix.
     Modify the variable globally
@@ -165,21 +166,26 @@ def gauss( matrix , b = 0, partial_pivoting:bool = True , permutation:bool = Fal
             Matrix has to be square
 
     """
-    if (type(b) is int) and (b == 0): b = np.zeros(len(matrix))
+    
+    changed_matrix = mat.astype(np.float32)
+    b = coeff.astype(np.float32)
+    if (type(b) is int) and (b == 0): b = np.zeros(len(changed_matrix))
 
-    if len(matrix) != len(b): raise TypeError("the 2 argument has to be the same lenght")
-    if len(matrix) != len(matrix[0]): raise TypeError("the matrix has to be square")
+
+    if len(changed_matrix) != len(b): raise TypeError("the 2 argument has to be the same lenght")
+    if len(changed_matrix) != len(changed_matrix[0]): raise TypeError("the matrix has to be square")
     
 
-    if(partial_pivoting): p = part_pivot( matrix , b , permutation)
+    if(partial_pivoting): p = part_pivot( changed_matrix , b , permutation)
+    else: p = np.identity(len(changed_matrix))
 
-    for i in range( len(matrix)-1):
-        for j in range( i+1 , len(matrix)):
+    for i in range( len(changed_matrix)-1):
+        for j in range( i+1 , len(changed_matrix)):
 
-            k = matrix[j,i] / matrix[i,i]
-            matrix[j] = -k * matrix[i] + matrix[j]
-            b[j] = -k * b[j] + b[i]
-    return p
+            k = changed_matrix[j,i] / changed_matrix[i,i]
+            changed_matrix[j] = -k * changed_matrix[i] + changed_matrix[j]
+            b[j] = -k * b[i] + b[j]
+    return changed_matrix,b,p
 
 
 def part_pivot(matrix , b = 0 , permutation = False):
@@ -240,43 +246,15 @@ def inverse_mat( matrix:np.array) -> np.array:
 
     if len(matrix) != len(matrix[0]): raise TypeError("the matrix has to be square")
 
-    mat1 = np.copy(matrix)
+    mat1 = matrix.astype(np.float32)
     inv_mat = np.identity(len(mat1) , dtype= np.float32)
-    for i in range( len(mat1)-1):
-        for j in range( i+1 , len(mat1)):
-            k = mat1[j,i] / mat1[i,i]
-            mat1[j] = -k * mat1[i] + mat1[j]
-            inv_mat[j] = -k * inv_mat[i] + inv_mat[j]
-    inv_mat = np.transpose(inv_mat)
-    mat1 = np.transpose( mat1)
-    
-    for i in range( len(mat1)-1):
-        for j in range( i+1 , len(mat1)):
-            k = mat1[j,i] / mat1[i,i]
-            mat1[j] = -k * mat1[i] + mat1[j]
-            inv_mat[j] = -k * inv_mat[i] + inv_mat[j]
-
-    for i in range( len(mat1) ):
-        inv_mat[i] /= mat1[i,i]
-
-
-    return np.transpose(inv_mat)
-
-
-def inverse( matrix: np.array) -> np.array:
-    
-    if len(matrix) != len(matrix[0]): raise TypeError("the matrix has to be square")
-
-    mat1 = np.copy(matrix)
-    id = np.identity(len(mat1) , dtype= np.float32)
-    inv_mat = np.copy(matrix)
-    
     for i in range(len(matrix)):
-        inv_mat[i] = solve_mat( matrix , id[i])
+        inv_mat[i] = solve_mat( matrix , inv_mat[i])
     return np.transpose(inv_mat)
 
 
-def solve_mat( matrix:np.array , coefficents:np.array , change_mat:bool = False , partial_pivoting:bool = True) -> np.array:
+
+def solve_mat( matrix:np.array , coefficents:np.array, partial_pivoting:bool = True) -> np.array:
     """
     Parameters
     ---------
@@ -284,9 +262,6 @@ def solve_mat( matrix:np.array , coefficents:np.array , change_mat:bool = False 
         matrix of coefficients, M in the formula Mx = b
     coefficients: 1D array like
         list of coefficients, b in the formula Mx = b
-    change_mat: bool
-        bool value if you want the input mat and b changed or not.
-        Default: False
     partial_pivoting: bool
         bool value if you want to apply partial pivoting to the gauss method.
         Default:True
@@ -304,14 +279,8 @@ def solve_mat( matrix:np.array , coefficents:np.array , change_mat:bool = False 
     
     """
     
-    if change_mat:
-        mat1 = matrix
-        b = coefficents
-    else:
-        mat1 = np.copy(matrix)
-        b = np.copy(coefficents)
     
-    gauss( mat1 , b , partial_pivoting)
+    mat1 , b , _ = gauss( matrix , coefficents , partial_pivoting)
     return up_back_solution( mat1 , b)
 
 
@@ -345,8 +314,8 @@ def LU_decomposition( mat:np.array , partial_pivot:bool = True) -> list:
 
     if len(mat) != len(mat[0]) : raise TypeError("matrix has to be square")
     
-    L = np.identity(len(mat))
-    U = np.copy(mat)
+    L = np.identity(len(mat) , dtype = np.float32)
+    U = mat.astype(np.float32)
 
     P = part_pivot(U , permutation=partial_pivot)
 
@@ -354,7 +323,7 @@ def LU_decomposition( mat:np.array , partial_pivot:bool = True) -> list:
         for j in range( i+1 , len(U)):
 
             L[j,i]= U[j,i] / U[i,i]
-            U[j] = -L[j,i] * U[i] + U[j]
+            U[j] = -(L[j,i] * U[i]) + U[j]
     
     if type(P) == type(None): P = np.identity(len(mat))
     return [P,L,U]
@@ -385,6 +354,13 @@ def LU_determinant( matrix: np.array) -> float:
 
 
 if __name__ == '__main__':
-    matrix = np.array([[1, 2], [0, 0]])
-    coefficients = np.array([1, 0])
-    print(up_back_solution(matrix, coefficients))    
+    matrix = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    P, L, U = LU_decomposition(matrix)
+    expected_P, expected_L, expected_U = la.lu(matrix , p_indices=True)
+
+    # print(np.allclose(P , expected_P))
+    # print(np.allclose(L , expected_L))
+    # print(np.allclose(U , expected_U))
+    print(P@L@U ,'\n\n', matrix)
+
+
