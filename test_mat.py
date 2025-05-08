@@ -208,8 +208,8 @@ class Test_SolveMat(unittest.TestCase):
         self.assertTrue(np.allclose(solve_mat(identity_matrix, coefficients), expected_result))
 
     def test_solve_mat_large_matrix(self):
-        matrix = np.random.rand(10, 10)
-        coefficients = np.random.rand(10)
+        matrix = np.random.rand(100, 100)
+        coefficients = np.random.rand(100)
         expected_result = np.linalg.solve(matrix, coefficients)
         self.assertTrue(np.allclose(solve_mat(matrix, coefficients), expected_result))
 

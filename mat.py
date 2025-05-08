@@ -361,6 +361,9 @@ if __name__ == '__main__':
     # print(np.allclose(P , expected_P))
     # print(np.allclose(L , expected_L))
     # print(np.allclose(U , expected_U))
-    print(P@L@U ,'\n\n', matrix)
+    #print(P@L@U ,'\n\n', matrix)
+
+    print(matrix)
+    print(matrix[0,1])
 
 
